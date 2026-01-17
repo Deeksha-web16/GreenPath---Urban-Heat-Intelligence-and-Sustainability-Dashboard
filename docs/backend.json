@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "UserLocation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserLocation",
+      "type": "object",
+      "description": "Represents the location and living type information for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserLocation entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 UserLocation)"
+        },
+        "city": {
+          "type": "string",
+          "description": "The city selected by the user."
+        },
+        "livingType": {
+          "type": "string",
+          "description": "The type of living arrangement selected by the user (e.g., Flat, House, Ground)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "city",
+        "livingType"
+      ]
+    },
+    "Feedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents user feedback collected through the app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Feedback entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Feedback)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the user providing feedback."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user providing feedback.",
+          "format": "email"
+        },
+        "message": {
+          "type": "string",
+          "description": "The feedback message provided by the user."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "email",
+        "message"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/locations/{locationId}",
+        "definition": {
+          "entityName": "UserLocation",
+          "schema": {
+            "$ref": "#/backend/entities/UserLocation"
+          },
+          "description": "Stores user location data, including city and living type. Path-based ownership ensures only the user can access their own location data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "locationId",
+              "description": "The unique identifier of the user location."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/feedback/{feedbackId}",
+        "definition": {
+          "entityName": "Feedback",
+          "schema": {
+            "$ref": "#/backend/entities/Feedback"
+          },
+          "description": "Stores user feedback. Path-based ownership ensures only the user or an admin can access user feedback data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "feedbackId",
+              "description": "The unique identifier of the feedback entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to address the 'auth/configuration-not-found' error and facilitate the development of the GreenPath application by focusing on simplicity, security, and scalability. The core principle is Authorization Independence, achieved through denormalization, which simplifies security rules and enables atomic operations. Segregation of data based on access needs is also employed.\n\nThe structure leverages path-based ownership for user-specific data.  The `/users/{userId}/locations` and `/users/{userId}/feedback` collections directly associate data with a specific user. This ensures clear ownership and simplifies security rules.  No `get()` calls are needed in security rules to validate user access.\n\nThe structure also provides solid foundations for future role-based access control by making use of a dedicated collection to store global role assignments using the Existence over Content pattern (DBAC).\n\nThis design supports secure list operations (QAPs) by ensuring that each collection contains data with a homogeneous security posture. Path-based ownership means that listing documents within `/users/{userId}/locations` or `/users/{userId}/feedback` inherently filters results to only those belonging to the authenticated user.  Security rules will simply validate that `request.auth.uid == userId`."
+  }
+}

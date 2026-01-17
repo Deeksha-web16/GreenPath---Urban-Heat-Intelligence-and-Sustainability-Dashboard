@@ -1,0 +1,81 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 140 30% 90%; /* Light Green-Gray */
+    --foreground: 222.2 84% 4.9%;
+    --card: 110 40% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 110 40% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 140 39% 35%; /* Muted Green */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 110 20% 92%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 110 20% 92%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 140 50% 60%; /* Soft Green */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 110 20% 88%;
+    --input: 110 20% 88%;
+    --ring: 140 39% 35%;
+    --chart-1: 140 39% 35%;
+    --chart-2: 140 50% 50%;
+    --chart-3: 160 50% 40%;
+    --chart-4: 140 40% 60%;
+    --chart-5: 140 30% 55%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 84 15% 15%; /* Dark Forest Green */
+    --foreground: 0 0% 95%; /* Off-white */
+    --card: 84 15% 18%;
+    --card-foreground: 0 0% 95%;
+    --popover: 84 15% 18%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 84 39% 45%; /* Dark Olive Green */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 10% 23%; /* Charcoal Gray */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 210 10% 23%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 160 84% 39%; /* Deep Teal */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 10% 23%;
+    --input: 210 10% 23%;
+    --ring: 160 84% 39%;
+    --chart-1: 84 39% 45%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 140 50% 60%;
+    --chart-4: 84 30% 55%;
+    --chart-5: 160 40% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .shadow-green-glow {
+    box-shadow: 0 0 25px rgba(6, 95, 70, 0.55),
+      0 0 55px rgba(22, 163, 74, 0.45), 0 0 90px rgba(20, 83, 45, 0.35);
+  }
+  .shadow-green-glow-hover {
+    box-shadow: 0 0 35px rgba(6, 95, 70, 0.7),
+      0 0 75px rgba(22, 163, 74, 0.6), 0 0 120px rgba(20, 83, 45, 0.45);
+  }
+}

@@ -1,0 +1,152 @@
+/**
+ * Core Philosophy:
+ * This ruleset implements a strict, user-centric security model. All data is
+ * considered private and is stored in subcollections under a user's unique
+ * document path (`/users/{userId}`). Access is granted exclusively to the
+ * authenticated user who owns that specific data path.
+ *
+ * Data Structure:
+ * The Firestore database is organized hierarchically around users. The root of
+ * all user-specific data is `/users/{userId}`. Key user data, such as
+ * locations and feedback, are stored in dedicated subcollections:
+ * - /users/{userId}/locations/{locationId}
+ * - /users/{userId}/feedback/{feedbackId}
+ * This structure ensures that all queries and document lookups for a user's
+ * private data can be scoped to a predictable path.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All paths are closed by default. Access is only granted
+ *   through explicit `allow` statements.
+ * - Strict Ownership: A user can only read or write data within their own
+ *   `/users/{userId}` document tree. Cross-user access is forbidden.
+ * - No User Listing: Listing documents in the top-level `/users` collection is
+ *   explicitly disabled to protect user privacy and prevent enumeration attacks.
+ * - Path and Data Consistency: On creation, documents must contain a `userId`
+ *   field that matches the `{userId}` in the path, ensuring a permanent and
+ *   verifiable link to the owner. This ownership link is immutable.
+ *
+ * Denormalization for Authorization:
+ * This ruleset relies on path-based security, which is a form of denormalization.
+ * The user's UID is part of the document path, eliminating the need for costly `get()`
+ * calls to other documents to verify ownership. Additionally, documents within these
+ * user-specific paths contain a `userId` field, which is used to enforce relational
+ * integrity and ensure the data's owner is explicitly declared within the document itself.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to improve readability and reuse of logic.
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing data ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * A robust check for update/delete operations, ensuring the user is the
+     * owner AND the document already exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that the incoming document's 'userId' field matches the
+     * userId from the document path. Used on create operations.
+     */
+    function incomingDataMatchesPath(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * Enforces immutability of the 'userId' field on update operations.
+     * This prevents re-assigning ownership of a document.
+     */
+    function ownerIdIsImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    /**
+     * @description
+     *   Governs access to a user's own root document. While no specific entity
+     *   is defined for the user document itself, this rule allows users to create,
+     *   read, and update their own profile document. It explicitly denies listing
+     *   of all users and deletion of one's own profile.
+     * @path
+     *   /users/{userId}
+     * @allow
+     *   (create) A newly signed-up user `auth.uid: 'user123'` can create their own
+     *   profile document at `/users/user123`.
+     * @deny
+     *   (list) A user cannot list all documents in the `/users` collection.
+     * @principle
+     *   Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if false;
+    }
+
+    /**
+     * @description
+     *   Secures a user's location documents. Only the authenticated owner of the
+     *   data can create, read, update, or delete their own location information.
+     * @path
+     *   /users/{userId}/locations/{locationId}
+     * @allow
+     *   (create) User `auth.uid: 'user123'` can create a new location document at
+     *   `/users/user123/locations/loc_abc` if the new document contains `{ "userId": "user123", ... }`.
+     * @deny
+     *   (get) User `auth.uid: 'user456'` is denied access to read a document at
+     *   `/users/user123/locations/loc_abc`.
+     * @principle
+     *   Enforces strict document ownership and validates relational integrity
+     *   between the document's path and its internal `userId` field.
+     */
+    match /users/{userId}/locations/{locationId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && incomingDataMatchesPath(userId);
+      allow update: if isExistingOwner(userId) && ownerIdIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description
+     *   Secures a user's feedback documents. Only the authenticated owner can manage
+     *   their own feedback entries. This ensures user privacy for submitted feedback.
+     * @path
+     *   /users/{userId}/feedback/{feedbackId}
+     * @allow
+     *   (list) User `auth.uid: 'user123'` can list all their submitted feedback from
+     *   the collection `/users/user123/feedback`.
+     * @deny
+     *   (update) User `auth.uid: 'user456'` is denied from updating a feedback document
+     *   at `/users/user123/feedback/fb_abc`.
+     * @principle
+     *   Enforces strict document ownership and validates relational integrity
+     *   between the document's path and its internal `userId` field.
+     */
+    match /users/{userId}/feedback/{feedbackId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && incomingDataMatchesPath(userId);
+      allow update: if isExistingOwner(userId) && ownerIdIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
